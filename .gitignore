@@ -52,3 +52,7 @@ Mkfile.old
 dkms.conf
 .vs
 Debug
+*.sln
+*.filters
+*.user
+*.vcxproj

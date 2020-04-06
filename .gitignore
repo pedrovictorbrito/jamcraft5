@@ -56,3 +56,5 @@ Debug
 *.filters
 *.user
 *.vcxproj
+.vscode
+tasks.json

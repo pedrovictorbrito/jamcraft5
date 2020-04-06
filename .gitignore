@@ -58,3 +58,4 @@ Debug
 *.vcxproj
 .vscode
 tasks.json
+.vs

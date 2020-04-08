@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MOVE_DOWN(ENTITY, SPRITE_ONE, SPRITE_TWO) _move(&ticks_snapshot[0], ENTITY, &ENTITY.y, 10, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
+#define MOVE_DOWN(ENTITY, SPRITE_ONE, SPRITE_TWO) _move(&ticks_snapshot[0], &ENTITY, &ENTITY.y, 10, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
 
 typedef enum {
     MOTHER_FACING_DOWN_CRYING = 0,
@@ -42,22 +42,6 @@ void _move(Uint32 *ticks_snapshot, SDL_Rect *entity, int *entity_property, int p
 }
 
 int main(int argc, char* argv[]) {
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-    SDL_Surface* sprite_sheet_surface;
-    SDL_Texture* sprite_sheet;
-    SDL_Rect mother = {
-        .x = 0,
-        .y = 0,
-        .w = 1280 / 16,
-        .h = 720 / 9
-    };
-    SDL_Event event;
-    Uint8 *keyboard_state;
-    char* base_path;
-    char* str_buffer;
-    Uint32 ticks_snapshot[2];
-
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s", SDL_GetError());
         return 3;
@@ -68,6 +52,9 @@ int main(int argc, char* argv[]) {
         SDL_Quit();
     }
 
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+
     if (SDL_CreateWindowAndRenderer(1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED,
         &window, &renderer) == -1) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window and renderer: %s", SDL_GetError());
@@ -75,11 +62,11 @@ int main(int argc, char* argv[]) {
         return 3;
     }
 
-    base_path = SDL_GetBasePath();
-    str_buffer = (char*) malloc(SDL_utf8strlen(base_path) + 4 + 256);
-    snprintf(str_buffer, SDL_utf8strlen(base_path) + SDL_strlen("res?sprite_sheet.bmp") + 1, "%sres%csprite_sheet.bmp", base_path, PATH_SEPARATOR);
+    char *base_path = SDL_GetBasePath();
+    void *buffer = malloc(SDL_utf8strlen(base_path) + 4 + 256);
+    snprintf((char*)buffer, SDL_utf8strlen(base_path) + SDL_strlen("res?sprite_sheet.bmp") + 1, "%sres%csprite_sheet.bmp", base_path, PATH_SEPARATOR);
 
-    sprite_sheet_surface = SDL_LoadBMP_RW(SDL_RWFromFile(str_buffer, "rb"), 1);
+    SDL_Surface* sprite_sheet_surface = SDL_LoadBMP_RW(SDL_RWFromFile(buffer, "rb"), 1);
 
     if (!sprite_sheet_surface) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create sprite sheet surface from bitmap file: %s", SDL_GetError());
@@ -91,9 +78,19 @@ int main(int argc, char* argv[]) {
 
     SDL_SetColorKey(sprite_sheet_surface, SDL_TRUE, SDL_MapRGB(sprite_sheet_surface->format, 6, 6, 6));
 
-    sprite_sheet = SDL_CreateTextureFromSurface(renderer, sprite_sheet_surface);
+    SDL_Texture *sprite_sheet = SDL_CreateTextureFromSurface(renderer, sprite_sheet_surface);
 
     SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
+
+    SDL_Rect mother = {
+        .x = 0,
+        .y = 0,
+        .w = 1280 / 16,
+        .h = 720 / 9
+    };
+    SDL_Event event;
+    Uint8 *keyboard_state;
+    Uint32 ticks_snapshot[2];
 
     while (SDL_TRUE) {
         SDL_PollEvent(&event);
@@ -108,6 +105,7 @@ int main(int argc, char* argv[]) {
 
         if (keyboard_state[SDL_SCANCODE_DOWN]) {
             MOVE_DOWN(mother, MOTHER_FACING_DOWN_CRYING, MOTHER_FACING_DOWN_PLAIN);
+        }
         /*
         else if (keyboard_state[SDL_SCANCODE_UP]) {
             mother.y -= 80;
@@ -132,7 +130,7 @@ int main(int argc, char* argv[]) {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_free(base_path);
-    free(str_buffer);
+    free(buffer);
     SDL_Quit();
 
     return 0;

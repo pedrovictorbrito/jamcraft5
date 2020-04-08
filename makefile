@@ -7,6 +7,10 @@ OBJ=main
 CC=gcc
 CFLAGS=-I$(IDIR) -B$(LDIR) $(LIBS) -o$(ODIR)$(OBJ) $(SRCDIR)
 
+debug:
+	$(CC) -D PATH_SEPARATOR="'/'" -g $(CFLAGS)
+	gdb bin/main
+
 run:
 	$(CC) -D PATH_SEPARATOR="'/'" $(CFLAGS)
 	bin/main

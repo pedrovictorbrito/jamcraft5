@@ -5,14 +5,14 @@
 #include <string.h>
 
 #define ANIMATION_TIME 400
-#define ANIMATION_KEY_FRAME_COUNT 4
+#define ANIMATION_KEY_FRAME_COUNT 8
 
 #define EQUAL 0
 
-#define MOVE_DOWN(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.y, tile_lenght, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
-#define MOVE_UP(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.y, -tile_lenght, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
-#define MOVE_RIGHT(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.x, tile_lenght, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
-#define MOVE_LEFT(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.x, -tile_lenght, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
+#define MOVE_DOWN(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.y, tile_size, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
+#define MOVE_UP(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.y, -tile_size, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
+#define MOVE_RIGHT(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.x, tile_size, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
+#define MOVE_LEFT(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.x, -tile_size, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
 
 typedef enum {
     MOTHER_FACING_DOWN_CRYING = 0,
@@ -54,11 +54,11 @@ SDL_Rect* get_sprite(Sprite sprite) {
     return &buffer_rect;
 }
 
-void _move(Uint32 ticks_snapshot, SDL_Rect *entity, int *entity_property, int pixels_to_move, SDL_Renderer *renderer, SDL_Texture *sprite_sheet, Sprite first_sprite, Sprite second_sprite) {
+void _move(Uint32 ticks_snapshot, SDL_Rect *entity, int *entity_property, int tile_size, SDL_Renderer *renderer, SDL_Texture *sprite_sheet, Sprite first_sprite, Sprite second_sprite) {
     int ms_elapsed = 0;
     while(ms_elapsed < (ANIMATION_TIME / 2)) {
         if ((SDL_GetTicks() - ticks_snapshot - ms_elapsed) >= ANIMATION_TIME / ANIMATION_KEY_FRAME_COUNT) {
-            *entity_property += pixels_to_move;
+            *entity_property += tile_size / ANIMATION_KEY_FRAME_COUNT;
             ms_elapsed += ANIMATION_TIME / ANIMATION_KEY_FRAME_COUNT;
             SDL_RenderClear(renderer);
             SDL_RenderCopy(renderer, sprite_sheet, get_sprite(first_sprite), entity);
@@ -67,7 +67,7 @@ void _move(Uint32 ticks_snapshot, SDL_Rect *entity, int *entity_property, int pi
     }
     while(ms_elapsed < ANIMATION_TIME) {
         if ((SDL_GetTicks() - ticks_snapshot - ms_elapsed) >= ANIMATION_TIME / ANIMATION_KEY_FRAME_COUNT) {
-            *entity_property += pixels_to_move;
+            *entity_property += tile_size / ANIMATION_KEY_FRAME_COUNT;
             ms_elapsed += ANIMATION_TIME / ANIMATION_KEY_FRAME_COUNT;
             SDL_RenderClear(renderer);
             SDL_RenderCopy(renderer, sprite_sheet, get_sprite(second_sprite), entity);
@@ -133,7 +133,9 @@ int main(int argc, char* argv[]) {
     SDL_Event event;
     Uint8 *keyboard_state;
     Uint32 ticks_snapshot;
-    int tile_lenght = display_mode.h / 9;
+    int tile_size = display_mode.h / 9;
+
+    printf("Display width: %d\nDisplay height: %d Tile lenght: %d", display_mode.w, display_mode.h, tile_size);
 
     while (SDL_TRUE) {
         SDL_PollEvent(&event);

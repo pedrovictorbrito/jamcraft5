@@ -2,14 +2,17 @@
 #include "SDL2/SDL_ttf.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define ANIMATION_TIME 400
 #define ANIMATION_KEY_FRAME_COUNT 4
 
-#define MOVE_DOWN(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.y, 10, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
-#define MOVE_UP(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.y, -10, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
-#define MOVE_RIGHT(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.x, 10, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
-#define MOVE_LEFT(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.x, -10, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
+#define EQUAL 0
+
+#define MOVE_DOWN(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.y, tile_lenght, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
+#define MOVE_UP(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.y, -tile_lenght, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
+#define MOVE_RIGHT(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.x, tile_lenght, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
+#define MOVE_LEFT(ENTITY_ADDRESS, SPRITE_ONE, SPRITE_TWO) _move(ticks_snapshot, ENTITY_ADDRESS, ENTITY_ADDRESS.x, -tile_lenght, renderer, sprite_sheet, SPRITE_ONE, SPRITE_TWO)
 
 typedef enum {
     MOTHER_FACING_DOWN_CRYING = 0,
@@ -35,7 +38,7 @@ void destroy_window_and_renderer() {
     SDL_DestroyWindow(global.window);
 }
 
-inline void panic(char* msg) {
+void sdl_panic(char* msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, msg, SDL_GetError());
     exit(EXIT_FAILURE);
 }
@@ -74,25 +77,38 @@ void _move(Uint32 ticks_snapshot, SDL_Rect *entity, int *entity_property, int pi
 }
 
 int main(int argc, char* argv[]) {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) panic("Couldn't initialize SDL: %s");
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) sdl_panic("Couldn't initialize SDL: %s");
     atexit(SDL_Quit);
 
-    if (TTF_Init() == -1) panic("Couldn't initialize TTF: %s");
+    if (TTF_Init() == -1) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't init TTF: %s", SDL_GetError());
+        exit(3);
+    }
     atexit(TTF_Quit);
 
-    SDL_Window window;
-    SDL_Renderer renderer;
-    if (SDL_CreateWindowAndRenderer(1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED,
-        &window, &renderer) == -1) panic("Couldn't create window and renderer: %s");
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_DisplayMode display_mode;
+    SDL_GetCurrentDisplayMode(0, &display_mode);
+    if (SDL_CreateWindowAndRenderer(display_mode.w, display_mode.h, SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED,
+        &window, &renderer) == -1) sdl_panic("Couldn't create window and renderer: %s");
     atexit(destroy_window_and_renderer);
 
     char *base_path = SDL_GetBasePath();
     void *buffer = malloc(SDL_utf8strlen(base_path) + 4 + 256);
-
-    snprintf((char*)buffer, SDL_utf8strlen(base_path) + SDL_strlen("res?Minecraft.ttf") + 1, "%sres%cMinecraft.ttf", base_path, PATH_SEPARATOR);
+    char path_separator;
+    if (strcmp(SDL_GetPlatform(), "Windows") == EQUAL) {
+        printf("\nPlatform: %s\n", SDL_GetPlatform());
+        path_separator = '\\';
+    }
+    else path_separator = '/';
+    snprintf((char*)buffer, SDL_utf8strlen(base_path) + SDL_strlen("res?Minecraft.ttf") + 1, "%sres%cMinecraft.ttf", base_path, path_separator);
     TTF_Font *font = TTF_OpenFont(buffer, 16);
-
-    snprintf((char*)buffer, SDL_utf8strlen(base_path) + SDL_strlen("res?sprite_sheet.bmp") + 1, "%sres%csprite_sheet.bmp", base_path, PATH_SEPARATOR);
+    if (!font) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't open font file Minecraft.ttf in directory res at application's base path: %s", SDL_GetError());
+        exit(3);
+    }
+    snprintf((char*)buffer, SDL_utf8strlen(base_path) + SDL_strlen("res?sprite_sheet.bmp") + 1, "%sres%csprite_sheet.bmp", base_path, path_separator);
 
     SDL_Surface* sprite_sheet_surface = SDL_LoadBMP_RW(SDL_RWFromFile(buffer, "rb"), 1);
 
@@ -117,6 +133,7 @@ int main(int argc, char* argv[]) {
     SDL_Event event;
     Uint8 *keyboard_state;
     Uint32 ticks_snapshot;
+    int tile_lenght = display_mode.h / 9;
 
     while (SDL_TRUE) {
         SDL_PollEvent(&event);
